@@ -44,10 +44,13 @@ class Window:
         self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
 
     def onItemSelection(self, event = None):
-        selection = self.the_listbox.curselection()[0]
+        try:
+            self.index = self.the_listbox.curselection()[0]
+        except:
+            self.index = self.tags_listbox.curselection()[0]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
-            thumb = Image.open(self.dir + '/' + self.the_listbox.get(selection))
+            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.index))
             if thumb.height > thumb.width:
                 w /= thumb.height / thumb.width
             else:
@@ -62,7 +65,7 @@ class Window:
         except:
             for widgets in self.thumbFrame.winfo_children():
                 widgets.destroy()
-            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(selection), w, h)
+            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.index), w, h)
 
     def onEnterKey(self, event = None):
         try:
@@ -91,11 +94,16 @@ class Window:
         self.the_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
         self.the_listbox.bind('<MouseWheel>', self.onMouseWheel)
         self.the_listbox.bind('<Return>', self.onEnterKey)
+        self.the_listbox.bind('<Up>', self.onKeyUpDown)
+        self.the_listbox.bind('<Down>', self.onKeyUpDown)
 
         self.tags_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
         self.tags_listbox.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
+        self.tags_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
         self.tags_listbox.bind('<Return>', self.onEnterKey)
         self.tags_listbox.bind('<MouseWheel>', self.onMouseWheel)
+        self.tags_listbox.bind('<Up>', self.onKeyUpDown)
+        self.tags_listbox.bind('<Down>', self.onKeyUpDown)
         
         the_scrollbar = Scrollbar(self.tags_listbox, orient=VERTICAL,command=self.onScroll)
         self.the_listbox.config(yscrollcommand=the_scrollbar.set)
@@ -125,6 +133,16 @@ class Window:
         # this prevents default bindings from firing, which
         # would end up scrolling the widget twice
         return "break"
+    
+    def onKeyUpDown(self, event):
+        index = 0
+        if event.keysym == 'Up':
+            index = -1
+        elif event.keysym == 'Down':
+            index = 1
+        selection = event.widget.curselection()[0]
+        self.the_listbox.see(selection + index)
+        self.tags_listbox.see(selection + index)
 
 if __name__ == '__main__':
     db = DBConnector('database.db')
