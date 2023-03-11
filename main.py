@@ -69,6 +69,7 @@ class Window:
         self.topFrame = Toplevel(self.window)
         self.tagsEntry = Entry(self.topFrame)
         self.tagsEntry.pack()
+        self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
         self.tagsEntry.bind('<Return>', self.onEntrySubmit)
         self.tagsEntry.insert(0, self.tags_listbox.get(self.index))
         self.tagsEntry.focus_set()
