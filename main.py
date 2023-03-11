@@ -29,7 +29,7 @@ class Window:
         self.tags_listbox.delete(0, END)
         for file in self.files:
             tags = db.getTags(file)
-            if self.searchFilter.lower() in tags.lower():
+            if self.searchFilter.lower() in tags.lower() or self.searchFilter in file:
                 self.the_listbox.insert(END, file)
                 self.tags_listbox.insert(END, tags)
 

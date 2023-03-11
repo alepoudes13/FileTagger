@@ -86,3 +86,4 @@ class VideoPlayer:
         self.progress_slider.set(self.progress_slider["to"])
         self.play_pause_btn["text"] = "Play"
         self.progress_slider.set(0)
+        self.play_pause()
