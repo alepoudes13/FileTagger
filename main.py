@@ -26,9 +26,12 @@ class Window:
     def getSearchEntry(self, event = None):
         self.searchFilter = self.searchEntry.get()
         self.the_listbox.delete(0, END)
+        self.tags_listbox.delete(0, END)
         for file in self.files:
-            if self.searchFilter in file:
+            tags = db.getTags(file)
+            if self.searchFilter.lower() in tags.lower():
                 self.the_listbox.insert(END, file)
+                self.tags_listbox.insert(END, tags)
 
     def openFolder(self):
         self.dir = filedialog.askdirectory(title = "Select folder to open")
@@ -75,7 +78,6 @@ class Window:
         self.tagsEntry.focus_set()
 
     def onEntrySubmit(self, event = None):
-        print(self.tagsEntry.get())
         self.tags_listbox.delete(self.index)
         self.tags_listbox.insert(self.index, self.tagsEntry.get())
         db.setTags(self.the_listbox.get(self.index), self.tagsEntry.get())
