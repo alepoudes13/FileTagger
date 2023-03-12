@@ -4,6 +4,7 @@ from tkinter import filedialog
 from video import VideoPlayer
 from database import DBConnector
 from dictionary import Dict
+import clipboard
 from PIL import Image, ImageTk
 
 class Window:
@@ -22,9 +23,16 @@ class Window:
         self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.window.bind('<Configure>', self.frameResize)
+        self.window.bind('<Control-c>', self.onCopy)
         self.searchEntry = Entry(self.window, background='#cccccc')
         self.searchEntry.grid(row = 1, column = 3)
         self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
+
+    def onCopy(self, event):
+        try:
+            clipboard.send_image(self.dir + '/' + self.the_listbox.get(self.lastIndex))
+        except:
+            pass
 
     def getSearchEntry(self, event = None):
         self.searchFilter = self.searchEntry.get()
