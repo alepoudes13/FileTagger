@@ -44,13 +44,10 @@ class Window:
         self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
 
     def onItemSelection(self, event = None):
-        try:
-            self.index = self.the_listbox.curselection()[0]
-        except:
-            self.index = self.tags_listbox.curselection()[0]
+        index = event.widget.curselection()[-1]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
-            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.index))
+            thumb = Image.open(self.dir + '/' + self.the_listbox.get(index))
             if thumb.height > thumb.width:
                 w /= thumb.height / thumb.width
             else:
@@ -65,31 +62,39 @@ class Window:
         except:
             for widgets in self.thumbFrame.winfo_children():
                 widgets.destroy()
-            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.index), w, h)
+            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(index), w, h)
 
     def onEnterKey(self, event = None):
-        try:
-            self.index = self.the_listbox.curselection()[0]
-        except:
-            self.index = self.tags_listbox.curselection()[0]
+        self.active_list = event.widget
+        self.curselect_list = self.active_list.curselection()
+
         self.topFrame = Toplevel(self.window)
-        self.tagsEntry = Entry(self.topFrame)
-        self.tagsEntry.pack()
         self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
+        self.tagsEntry = Entry(self.topFrame)
+        self.tagsEntry.pack(ipadx=(self.thumbFrame.winfo_width()-125)/2)
         self.tagsEntry.bind('<Return>', self.onEntrySubmit)
-        self.tagsEntry.insert(0, self.tags_listbox.get(self.index))
+        self.topFrame.bind('<Escape>', self.destroyTop)
+        if len(self.curselect_list) == 1:
+            self.tagsEntry.insert(0, self.tags_listbox.get(self.curselect_list[-1]))
         self.tagsEntry.focus_set()
 
-    def onEntrySubmit(self, event = None):
-        self.tags_listbox.delete(self.index)
-        self.tags_listbox.insert(self.index, self.tagsEntry.get())
-        db.setTags(self.the_listbox.get(self.index), self.tagsEntry.get())
+    def destroyTop(self, event):
         self.topFrame.destroy()
+
+    def onEntrySubmit(self, event = None):
+        tags = self.tagsEntry.get()
+        for index in self.curselect_list:
+            self.tags_listbox.delete(index)
+            self.tags_listbox.insert(index, tags)
+            self.active_list.selection_set(index)
+            db.setTags(self.the_listbox.get(index), tags)
+        self.topFrame.destroy()
+        self.active_list.activate(self.curselect_list[-1])
 
     def listFilesInFolder(self):
         self.frameResize()
         
-        self.the_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
+        self.the_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white", selectmode=EXTENDED)
         self.the_listbox.place(relx = 0, rely = 0, relwidth = 0.4, relheight = 1)
         self.the_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
         self.the_listbox.bind('<MouseWheel>', self.onMouseWheel)
@@ -97,7 +102,7 @@ class Window:
         self.the_listbox.bind('<Up>', self.onKeyUpDown)
         self.the_listbox.bind('<Down>', self.onKeyUpDown)
 
-        self.tags_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
+        self.tags_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white", selectmode=EXTENDED)
         self.tags_listbox.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
         self.tags_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
         self.tags_listbox.bind('<Return>', self.onEnterKey)
@@ -140,7 +145,7 @@ class Window:
             index = -1
         elif event.keysym == 'Down':
             index = 1
-        selection = event.widget.curselection()[0]
+        selection = event.widget.curselection()[-1]
         self.the_listbox.see(selection + index)
         self.tags_listbox.see(selection + index)
 
