@@ -35,6 +35,10 @@ class Window:
             if self.searchFilter.lower() in tags or self.searchFilter in file:
                 self.the_listbox.insert(END, file)
                 self.tags_listbox.insert(END, tags)
+        self.the_listbox.insert(END, "")
+        self.tags_listbox.insert(END, "")
+        self.the_listbox.insert(END, "Total Files: " + str(self.the_listbox.size() - 1))
+        self.tags_listbox.insert(END, "")
 
     def openFolder(self):
         self.dir = filedialog.askdirectory(title = "Select folder to open")
@@ -83,8 +87,6 @@ class Window:
         self.tagsEntry.bind('<Tab>', self.onTab)
         self.tagsEntry.bind('<Down>', self.onEntryDown)
         self.topFrame.bind('<Escape>', self.destroyTop)
-        #if len(self.curselect_list) == 1:
-        #    self.tagsEntry.insert(0, self.tags_listbox.get(self.curselect_list[-1]))
         self.hints_listbox = Listbox(self.topFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
         self.hints_listbox.pack(expand=True, fill=BOTH)
         self.hints_listbox.bind('<Return>', self.onHintSelection)
@@ -106,6 +108,7 @@ class Window:
     def destroyTop(self, event):
         self.topFrame.destroy()
         self.active_list.activate(self.lastIndex)
+        self.active_list.selection_set(self.lastIndex)
 
     def onEntrySubmit(self, event = None):
         tag = self.tagsEntry.get()
@@ -143,6 +146,7 @@ class Window:
         self.the_listbox.bind('<Return>', self.onEnterKey)
         self.the_listbox.bind('<Up>', self.onKeyUpDown)
         self.the_listbox.bind('<Down>', self.onKeyUpDown)
+        self.the_listbox.bind('<BackSpace>', self.onBackspace)
 
         self.tags_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white", selectmode=EXTENDED)
         self.tags_listbox.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
@@ -151,6 +155,7 @@ class Window:
         self.tags_listbox.bind('<MouseWheel>', self.onMouseWheel)
         self.tags_listbox.bind('<Up>', self.onKeyUpDown)
         self.tags_listbox.bind('<Down>', self.onKeyUpDown)
+        self.tags_listbox.bind('<BackSpace>', self.onBackspace)
         
         the_scrollbar = Scrollbar(self.tags_listbox, orient=VERTICAL,command=self.onScroll)
         self.the_listbox.config(yscrollcommand=the_scrollbar.set)
@@ -190,6 +195,15 @@ class Window:
             selection = max(event.widget.curselection()[0], event.widget.curselection()[-1])
         self.the_listbox.see(selection + index)
         self.tags_listbox.see(selection + index)
+    
+    def onBackspace(self, event):
+        for index in event.widget.curselection():
+            self.dict.deleteTags(self.tags_listbox.get(index))
+            db.deleteName(self.the_listbox.get(index))
+            self.tags_listbox.delete(index)
+            self.tags_listbox.insert(index, '')
+            event.widget.selection_set(index)
+        event.widget.activate(self.lastIndex)
 
 if __name__ == '__main__':
     db = DBConnector('database.db')

@@ -20,17 +20,6 @@ class DBConnector:
         if tags == None:
             return ''
         return tags[0].lower()
-        
-    def setTags(self, name, tags):
-        if tags == '':
-            self.deleteName(name)
-            return 
-        table = self.c.execute(f'SELECT tags FROM {self.activeTable} WHERE name = "{name}"').fetchone()
-        if table == None:
-            self.c.execute(f'INSERT INTO {self.activeTable}(name, tags) VALUES (?,?)', (name, tags))
-        else:
-            self.c.execute(f'UPDATE {self.activeTable} SET tags = (?) WHERE name = (?)', [tags, name])
-        self.conn.commit()
 
     def setTag(self, name, tag):
         if tag == '':

@@ -26,3 +26,9 @@ class Dict:
         if not tag.lower() in self.tags:
             self.tags[tag.lower()] = 0
         self.tags[tag.lower()] += 1
+
+    def deleteTags(self, tags):
+        for tag in tags.split('|'):
+            self.tags[tag] -= 1
+            if self.tags[tag] == 0:
+                self.tags.pop(tag)
