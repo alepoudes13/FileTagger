@@ -119,6 +119,7 @@ class Window:
             self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
             self.active_list.selection_set(index)
             self.dict.addTag(tag)
+        db.commit()
         self.tagsEntry.delete(0, END)
 
     def onTagsEntryKeyRelease(self, event):
@@ -203,6 +204,7 @@ class Window:
             self.tags_listbox.delete(index)
             self.tags_listbox.insert(index, '')
             event.widget.selection_set(index)
+        db.commit()
         event.widget.activate(self.lastIndex)
 
 if __name__ == '__main__':

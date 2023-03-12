@@ -10,6 +10,9 @@ class DBConnector:
         self.c.close()
         self.conn.close()
 
+    def commit(self):
+        self.conn.commit()
+
     def createTable(self, dir_path):
         self.activeTable = f'[{dir_path}]'
         self.c.execute(f" CREATE TABLE IF NOT EXISTS {self.activeTable} (name text PRIMARY KEY, tags text); ")
@@ -29,12 +32,10 @@ class DBConnector:
             self.c.execute(f'INSERT INTO {self.activeTable}(name, tags) VALUES (?,?)', (name, tag))
         elif not tag in tags[0].split('|'):
             self.c.execute(f'UPDATE {self.activeTable} SET tags = (?) WHERE name = (?)', [tags[0] + '|' + tag, name])
-        self.conn.commit()
 
     def deleteName(self, name):
         try:
             self.c.execute(f'DELETE FROM {self.activeTable} WHERE name = "{name}"')
-            self.conn.commit()
         except:
             pass
 
