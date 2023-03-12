@@ -9,8 +9,8 @@ from PIL import Image, ImageTk
 class Window:
     def __init__(self) -> None:
         self.dir = None
-        self.lastIndex = -1
-        self.preLastIndex = -1
+        self.leftIndex = None
+        self.lastIndex = None
         self.window = Tk()
         self.window.title('Tagger')
         self.window.geometry("1000x500")
@@ -28,13 +28,54 @@ class Window:
 
     def getSearchEntry(self, event = None):
         self.searchFilter = self.searchEntry.get()
+        search_mode = 0
+        if '|' in self.searchFilter:
+            search_mode = 1 if self.searchFilter[0:2] == '||' else 2
         self.the_listbox.delete(0, END)
         self.tags_listbox.delete(0, END)
+        print(search_mode)
         for file in self.files:
             tags = db.getTags(file)
-            if self.searchFilter.lower() in tags or self.searchFilter in file:
-                self.the_listbox.insert(END, file)
-                self.tags_listbox.insert(END, tags)
+            match search_mode:
+                case 0:
+                    if self.searchFilter.lower() in file:
+                        self.the_listbox.insert(END, file)
+                        self.tags_listbox.insert(END, tags)
+                case 1:
+                    if tags == '':
+                        continue
+                    fit, size, tags_size = 0, 0, 0
+                    for search in self.searchFilter.lower().split('|'):
+                        if search == '':
+                            continue
+                        size += 1
+                        tags_size = 0
+                        for tag in tags.split('|'):
+                            if tag == '':
+                                continue
+                            tags_size += 1
+                            if search in tag[:len(search)]:
+                                fit += 1
+                    if fit == size == tags_size:
+                        self.the_listbox.insert(END, file)
+                        self.tags_listbox.insert(END, tags)
+                case 2:
+                    if tags == '':
+                        continue
+                    fit, size = 0, 0
+                    for search in self.searchFilter.lower().split('|'):
+                        if search == '':
+                            continue
+                        size += 1
+                        for tag in tags.split('|'):
+                            if tag == '':
+                                continue
+                            if search in tag[:len(search)]:
+                                fit += 1
+                    if fit == size:
+                        self.the_listbox.insert(END, file)
+                        self.tags_listbox.insert(END, tags)
+        
         self.the_listbox.insert(END, "")
         self.tags_listbox.insert(END, "")
         self.the_listbox.insert(END, "Total Files: " + str(self.the_listbox.size() - 1))
@@ -52,9 +93,11 @@ class Window:
         self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
 
     def onItemSelection(self, event = None):
-        tmp = self.lastIndex
-        self.lastIndex = event.widget.curselection()[-1] if abs(event.widget.curselection()[-1] - self.lastIndex) == 1 and self.preLastIndex != event.widget.curselection()[-1] else event.widget.curselection()[0]
-        self.preLastIndex = tmp
+        if self.leftIndex == event.widget.curselection()[0]:
+            self.lastIndex = event.widget.curselection()[-1]
+        else:
+            self.lastIndex = event.widget.curselection()[0]
+        self.leftIndex = event.widget.curselection()[0]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
             thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
