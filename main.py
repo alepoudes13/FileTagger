@@ -3,11 +3,14 @@ from tkinter import *
 from tkinter import filedialog
 from video import VideoPlayer
 from database import DBConnector
+from dictionary import Dict
 from PIL import Image, ImageTk
 
 class Window:
     def __init__(self) -> None:
         self.dir = None
+        self.lastIndex = -1
+        self.preLastIndex = -1
         self.window = Tk()
         self.window.title('Tagger')
         self.window.geometry("1000x500")
@@ -29,13 +32,14 @@ class Window:
         self.tags_listbox.delete(0, END)
         for file in self.files:
             tags = db.getTags(file)
-            if self.searchFilter.lower() in tags.lower() or self.searchFilter in file:
+            if self.searchFilter.lower() in tags or self.searchFilter in file:
                 self.the_listbox.insert(END, file)
                 self.tags_listbox.insert(END, tags)
 
     def openFolder(self):
         self.dir = filedialog.askdirectory(title = "Select folder to open")
         db.createTable(self.dir)
+        self.dict = Dict(db)
         self.listFilesInFolder()
 
     def frameResize(self, event = None):
@@ -44,10 +48,12 @@ class Window:
         self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
 
     def onItemSelection(self, event = None):
-        index = event.widget.curselection()[-1]
+        tmp = self.lastIndex
+        self.lastIndex = event.widget.curselection()[-1] if abs(event.widget.curselection()[-1] - self.lastIndex) == 1 and self.preLastIndex != event.widget.curselection()[-1] else event.widget.curselection()[0]
+        self.preLastIndex = tmp
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
-            thumb = Image.open(self.dir + '/' + self.the_listbox.get(index))
+            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
             if thumb.height > thumb.width:
                 w /= thumb.height / thumb.width
             else:
@@ -62,7 +68,7 @@ class Window:
         except:
             for widgets in self.thumbFrame.winfo_children():
                 widgets.destroy()
-            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(index), w, h)
+            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.lastIndex), w, h)
 
     def onEnterKey(self, event = None):
         self.active_list = event.widget
@@ -71,26 +77,62 @@ class Window:
         self.topFrame = Toplevel(self.window)
         self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
         self.tagsEntry = Entry(self.topFrame)
-        self.tagsEntry.pack(ipadx=(self.thumbFrame.winfo_width()-125)/2)
+        self.tagsEntry.pack()
         self.tagsEntry.bind('<Return>', self.onEntrySubmit)
+        self.tagsEntry.bind('<KeyRelease>', self.onTagsEntryKeyRelease)
+        self.tagsEntry.bind('<Tab>', self.onTab)
+        self.tagsEntry.bind('<Down>', self.onEntryDown)
         self.topFrame.bind('<Escape>', self.destroyTop)
-        if len(self.curselect_list) == 1:
-            self.tagsEntry.insert(0, self.tags_listbox.get(self.curselect_list[-1]))
+        #if len(self.curselect_list) == 1:
+        #    self.tagsEntry.insert(0, self.tags_listbox.get(self.curselect_list[-1]))
+        self.hints_listbox = Listbox(self.topFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
+        self.hints_listbox.pack(expand=True, fill=BOTH)
+        self.hints_listbox.bind('<Return>', self.onHintSelection)
         self.tagsEntry.focus_set()
+
+    def onEntryDown(self, event):
+        self.hints_listbox.focus_set()
+        self.hints_listbox.selection_set(0)
+
+    def onHintSelection(self, event):
+        try:
+            hint = event.widget.get(event.widget.curselection()[0])
+            self.tagsEntry.delete(0, END)
+            self.tagsEntry.insert(END, hint)
+            self.tagsEntry.focus_set()
+        except:
+            pass
 
     def destroyTop(self, event):
         self.topFrame.destroy()
+        self.active_list.activate(self.lastIndex)
 
     def onEntrySubmit(self, event = None):
-        tags = self.tagsEntry.get()
+        tag = self.tagsEntry.get()
         for index in self.curselect_list:
+            tags = self.tags_listbox.get(index)
+            db.setTag(self.the_listbox.get(index), tag)
             self.tags_listbox.delete(index)
-            self.tags_listbox.insert(index, tags)
+            self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
             self.active_list.selection_set(index)
-            db.setTags(self.the_listbox.get(index), tags)
-        self.topFrame.destroy()
-        self.active_list.activate(self.curselect_list[-1])
+            self.dict.addTag(tag)
+        self.tagsEntry.delete(0, END)
 
+    def onTagsEntryKeyRelease(self, event):
+        word = self.tagsEntry.get()
+        hints = self.dict.getHints(word)
+        self.hints_listbox.delete(0, END)
+        for hint in hints:
+            self.hints_listbox.insert(END, hint[0])
+        self.hints_listbox.configure(height=0)
+
+    def onTab(self, event):
+        hint = self.hints_listbox.get(0)
+        self.tagsEntry.delete(0, END)
+        self.tagsEntry.insert(END, hint)
+        self.tagsEntry.focus_set()
+        return "break"
+    
     def listFilesInFolder(self):
         self.frameResize()
         
@@ -135,17 +177,17 @@ class Window:
     def onMouseWheel(self, event):
         self.the_listbox.yview("scroll", int(-event.delta / 10), "units")
         self.tags_listbox.yview("scroll", int(-event.delta / 10),"units")
-        # this prevents default bindings from firing, which
-        # would end up scrolling the widget twice
         return "break"
     
     def onKeyUpDown(self, event):
         index = 0
+        selection = None
         if event.keysym == 'Up':
             index = -1
+            selection = min(event.widget.curselection()[0], event.widget.curselection()[-1])
         elif event.keysym == 'Down':
             index = 1
-        selection = event.widget.curselection()[-1]
+            selection = max(event.widget.curselection()[0], event.widget.curselection()[-1])
         self.the_listbox.see(selection + index)
         self.tags_listbox.see(selection + index)
 

@@ -19,7 +19,7 @@ class DBConnector:
         tags = self.c.execute(f'SELECT tags FROM {self.activeTable} WHERE name = "{name}"').fetchone()
         if tags == None:
             return ''
-        return tags[0]
+        return tags[0].lower()
         
     def setTags(self, name, tags):
         if tags == '':
@@ -32,9 +32,23 @@ class DBConnector:
             self.c.execute(f'UPDATE {self.activeTable} SET tags = (?) WHERE name = (?)', [tags, name])
         self.conn.commit()
 
+    def setTag(self, name, tag):
+        if tag == '':
+            return
+        tags = self.c.execute(f'SELECT tags FROM {self.activeTable} WHERE name = "{name}"').fetchone()
+        if tags == None:
+            self.c.execute(f'INSERT INTO {self.activeTable}(name, tags) VALUES (?,?)', (name, tag))
+        elif not tag in tags[0].split('|'):
+            self.c.execute(f'UPDATE {self.activeTable} SET tags = (?) WHERE name = (?)', [tags[0] + '|' + tag, name])
+        self.conn.commit()
+
     def deleteName(self, name):
         try:
             self.c.execute(f'DELETE FROM {self.activeTable} WHERE name = "{name}"')
             self.conn.commit()
         except:
             pass
+
+    def getAllTags(self):
+        tags = self.c.execute(f'SELECT tags FROM {self.activeTable}').fetchall()
+        return tags
