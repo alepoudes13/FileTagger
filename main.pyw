@@ -1,4 +1,4 @@
-import os, glob
+import os, glob, shutil
 from tkinter import *
 from tkinter import filedialog
 from video import VideoPlayer
@@ -20,6 +20,12 @@ class Window:
         self.button_explore.grid(column = 1, row = 1)  
         self.button_exit = Button(self.window, text = "Exit", command = exit)
         self.button_exit.grid(column = 2, row = 1)
+        self.button_copy = Button(self.window, text = "Copy", command = self.copyFiles)
+        self.button_copy.grid(column = 4, row = 1)  
+        self.button_move = Button(self.window, text = "Move to", command = self.moveFiles)
+        self.button_move.grid(column = 5, row = 1)
+        self.button_move = Button(self.window, text = "Delete files", command = self.deleteFiles)
+        self.button_move.grid(column = 6, row = 1)
         self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.window.bind('<Configure>', self.frameResize)
@@ -34,6 +40,46 @@ class Window:
         except:
             pass
 
+    def copyFiles(self):
+        dest = filedialog.askdirectory(title = "Select folder to open")
+        db.createTable(dest)
+        for index in self.active_list.curselection()[::-1]:
+            try:
+                shutil.copy2(self.dir + '/' + self.the_listbox.get(index), dest)
+                db.setTag(self.the_listbox.get(index), self.tags_listbox.get(index))
+            except:
+                pass
+        db.commit()
+        db.createTable(self.dir)
+    
+    def moveFiles(self):
+        dest = filedialog.askdirectory(title = "Select folder to open")
+        db.createTable(dest)
+        for index in self.active_list.curselection()[::-1]:
+            try:
+                db.setTag(self.the_listbox.get(index), self.tags_listbox.get(index))
+                shutil.move(self.dir + '/' + self.the_listbox.get(index), dest)
+                self.dict.deleteTags(self.tags_listbox.get(index))
+            except:
+                pass
+        db.commit()
+        db.createTable(self.dir)
+        for index in self.active_list.curselection()[::-1]:
+            db.deleteName(self.the_listbox.get(index))
+        db.commit()
+        self.listFilesInFolder()
+
+    def deleteFiles(self):
+        for index in self.active_list.curselection()[::-1]:
+            try:
+                db.deleteName(self.the_listbox.get(index))
+                self.dict.deleteTags(self.tags_listbox.get(index))
+            except:
+                pass
+            os.remove(self.dir + '/' + self.the_listbox.get(index))
+        db.commit()
+        self.listFilesInFolder()
+
     def getSearchEntry(self, event = None):
         self.searchFilter = self.searchEntry.get()
         search_mode = 0
@@ -41,7 +87,6 @@ class Window:
             search_mode = 1 if self.searchFilter[0:2] == '||' else 2
         self.the_listbox.delete(0, END)
         self.tags_listbox.delete(0, END)
-        print(search_mode)
         for file in self.files:
             tags = db.getTags(file)
             match search_mode:
@@ -101,6 +146,7 @@ class Window:
         self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
 
     def onItemSelection(self, event = None):
+        self.active_list = event.widget
         if self.leftIndex == event.widget.curselection()[0]:
             self.lastIndex = event.widget.curselection()[-1]
         else:
