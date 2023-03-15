@@ -8,10 +8,20 @@ import clipboard
 from PIL import Image, ImageTk
 
 class Window:
+
+    #WINDOW MANAGEMENT================================================================
+
     def close(self):
         db.deleteEmptyTable()
         db.close()
         exit()
+
+    def frameResize(self, event = None):
+        self.listFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
+        self.thumbFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
+        self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
+
+    #INIT================================================================
 
     def __init__(self) -> None:
         self.dir = None
@@ -29,8 +39,10 @@ class Window:
         self.button_copy.grid(column = 4, row = 1)  
         self.button_move = Button(self.window, text = "Move to", command = self.moveFiles)
         self.button_move.grid(column = 5, row = 1)
-        self.button_move = Button(self.window, text = "Delete files", command = self.deleteFiles)
-        self.button_move.grid(column = 6, row = 1)
+        self.button_del = Button(self.window, text = "Delete files", command = self.deleteFiles)
+        self.button_del.grid(column = 6, row = 1)
+        self.button_tag = Button(self.window, text = "Change tag to", command = self.changeTag)
+        self.button_tag.grid(column = 7, row = 1)
         self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.window.bind('<Configure>', self.frameResize)
@@ -39,6 +51,14 @@ class Window:
         self.searchEntry.grid(row = 1, column = 3)
         self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
 
+    #FILES MANAGEMENT================================================================
+
+    def openFolder(self):
+        self.dir = filedialog.askdirectory(title = "Select folder to open")
+        db.createTable(self.dir)
+        self.dict = Dict(db)
+        self.listFilesInFolder()
+    
     def onCopy(self, event):
         try:
             clipboard.send_image(self.dir + '/' + self.the_listbox.get(self.lastIndex))
@@ -84,6 +104,8 @@ class Window:
             os.remove(self.dir + '/' + self.the_listbox.get(index))
         db.commit()
         self.listFilesInFolder()
+
+    #SEARCH ================================================================
 
     def getSearchEntry(self, event = None):
         self.searchFilter = self.searchEntry.get()
@@ -150,42 +172,61 @@ class Window:
         self.the_listbox.insert(END, "Total Files: " + str(self.the_listbox.size() - 1))
         self.tags_listbox.insert(END, "")
 
-    def openFolder(self):
-        self.dir = filedialog.askdirectory(title = "Select folder to open")
-        db.createTable(self.dir)
-        self.dict = Dict(db)
-        self.listFilesInFolder()
+    #TAG CHANGE================================================================
 
-    def frameResize(self, event = None):
-        self.listFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
-        self.thumbFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
-        self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
+    def changeTag(self):
+        self.topFrame = Toplevel(self.window)
+        self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
 
-    def onItemSelection(self, event = None):
-        self.active_list = event.widget
-        if self.leftIndex == event.widget.curselection()[0]:
-            self.lastIndex = event.widget.curselection()[-1]
-        else:
-            self.lastIndex = event.widget.curselection()[0]
-        self.leftIndex = event.widget.curselection()[0]
-        w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
-        try:
-            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
-            if thumb.height > thumb.width:
-                w /= thumb.height / thumb.width
-            else:
-                h /= thumb.width / thumb.height
-            thumb = thumb.resize((int(w), int(h)))
-            tk_thumb = ImageTk.PhotoImage(thumb)
-            for widgets in self.thumbFrame.winfo_children():
-                widgets.destroy()
-            label = Label(self.thumbFrame, image=tk_thumb)
-            label.image = tk_thumb
-            label.place(relx=0.5, rely=0.5, anchor=CENTER)
-        except:
-            for widgets in self.thumbFrame.winfo_children():
-                widgets.destroy()
-            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.lastIndex), w, h)
+        fromLabel = Label(self.topFrame, font=("Calibri", "10"), text="From:")
+        fromLabel.grid(row=1, column=1)
+
+        toLabel = Label(self.topFrame, font=("Calibri", "10"), text="To:")
+        toLabel.grid(row=1, column=2)
+
+        self.tagsEntry = Entry(self.topFrame)
+        self.tagsEntry.grid(column=1, row=2)
+        self.tagsEntry.bind('<KeyRelease>', self.onTagsEntryKeyRelease)
+        self.tagsEntry.bind('<Tab>', self.onTab)
+        self.tagsEntry.bind('<Down>', self.onEntryDown)
+        self.tagsEntry.bind('<Right>', self.onRight)
+
+        self.newTagEntry = Entry(self.topFrame)
+        self.newTagEntry.grid(column=2, row=2)
+        self.newTagEntry.bind('<Return>', self.onTagRenameSubmit)
+        self.newTagEntry.bind('<Left>', self.onLeft)
+
+        self.topFrame.bind('<Escape>', self.destroyTop)
+        self.hints_listbox = Listbox(self.topFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
+        self.hints_listbox.grid(row=3, column=1)
+        self.hints_listbox.bind('<Return>', self.onHintSelection)
+        self.hints_listbox.configure(height=0)
+        self.tagsEntry.focus_set()
+
+    def onTagRenameSubmit(self, event = None):
+        tag = self.tagsEntry.get().lower()
+        newTag = self.newTagEntry.get().lower()
+        db.rename(tag, newTag)
+        db.commit()
+        self.dict.rename(tag, newTag)
+        self.tagsEntry.delete(0, END)
+        self.newTagEntry.delete(0, END)
+        for index in range(self.active_list.size()):
+            sel = False
+            if self.tags_listbox.select_includes(index) == True:
+                sel = True
+            self.tags_listbox.delete(index)
+            self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
+            if sel:
+                self.active_list.selection_set(index)
+
+    def onRight(self, event):
+        self.newTagEntry.focus_set()
+
+    def onLeft(self, event):
+        self.tagsEntry.focus_set()
+
+    #TAGS WINDOW================================================================
 
     def onEnterKey(self, event = None):
         self.active_list = event.widget
@@ -226,7 +267,6 @@ class Window:
     def onEntrySubmit(self, event = None):
         tag = self.tagsEntry.get()
         for index in self.curselect_list:
-            tags = self.tags_listbox.get(index)
             db.setTag(self.the_listbox.get(index), tag)
             self.tags_listbox.delete(index)
             self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
@@ -250,6 +290,34 @@ class Window:
         self.tagsEntry.focus_set()
         return "break"
     
+    #FILES LIST================================================================
+
+    def onItemSelection(self, event = None):
+        self.active_list = event.widget
+        if self.leftIndex == event.widget.curselection()[0]:
+            self.lastIndex = event.widget.curselection()[-1]
+        else:
+            self.lastIndex = event.widget.curselection()[0]
+        self.leftIndex = event.widget.curselection()[0]
+        w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
+        try:
+            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
+            if thumb.height > thumb.width:
+                w /= thumb.height / thumb.width
+            else:
+                h /= thumb.width / thumb.height
+            thumb = thumb.resize((int(w), int(h)))
+            tk_thumb = ImageTk.PhotoImage(thumb)
+            for widgets in self.thumbFrame.winfo_children():
+                widgets.destroy()
+            label = Label(self.thumbFrame, image=tk_thumb)
+            label.image = tk_thumb
+            label.place(relx=0.5, rely=0.5, anchor=CENTER)
+        except:
+            for widgets in self.thumbFrame.winfo_children():
+                widgets.destroy()
+            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.lastIndex), w, h)
+
     def listFilesInFolder(self):
         self.frameResize()
         

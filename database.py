@@ -6,14 +6,6 @@ class DBConnector:
         self.c = self.conn.cursor()
         self.activeTable = None
 
-    def deleteEmptyTable(self):
-        if self.activeTable == None:
-            return
-        row = self.c.execute(f'SELECT * FROM {self.activeTable}').fetchone()
-        if row == None:
-            self.c.execute(f'DROP TABLE {self.activeTable}')
-        self.conn.commit()
-
     def close(self):
         self.c.close()
         self.conn.close()
@@ -24,6 +16,14 @@ class DBConnector:
         self.conn.close()
 
     def commit(self):
+        self.conn.commit()
+    
+    def deleteEmptyTable(self):
+        if self.activeTable == None:
+            return
+        row = self.c.execute(f'SELECT * FROM {self.activeTable}').fetchone()
+        if row == None:
+            self.c.execute(f'DROP TABLE {self.activeTable}')
         self.conn.commit()
 
     def createTable(self, dir_path):
@@ -56,3 +56,13 @@ class DBConnector:
     def getAllTags(self):
         tags = self.c.execute(f'SELECT tags FROM {self.activeTable}').fetchall()
         return tags
+    
+    def rename(self, tag: str, newTag: str):
+        if tag == '':
+            return
+        tags = self.c.execute(f'SELECT * FROM {self.activeTable}').fetchall()
+        for item in tags:
+            if tag in item[1].split('|'):
+                string = '|' + item[1] + '|'
+                new_tags = string.replace('|' + tag + '|', '|' + newTag + '|')
+                self.c.execute(f'UPDATE {self.activeTable} SET tags = (?) WHERE name = (?)', [new_tags[1:-1], item[0]])

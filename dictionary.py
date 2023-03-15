@@ -32,3 +32,12 @@ class Dict:
             self.tags[tag] -= 1
             if self.tags[tag] == 0:
                 self.tags.pop(tag)
+
+    def rename(self, tag: str, newTag: str):
+        if not tag in self.tags:
+            return
+        if not newTag in self.tags:
+            self.tags[newTag] = 0
+        self.tags[newTag] += self.tags[tag]
+        self.tags.pop(tag)
+        
