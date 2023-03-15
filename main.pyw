@@ -120,16 +120,27 @@ class Window:
                 case 2:
                     if tags == '':
                         continue
-                    fit, size = 0, 0
-                    for search in self.searchFilter.lower().split('|'):
-                        if search == '':
+                    fit = 0
+                    for tag in tags.split('|'):
+                        if tag == '':
                             continue
-                        size += 1
-                        for tag in tags.split('|'):
-                            if tag == '':
+                        size = 0
+                        for search in self.searchFilter.lower().split('|'):
+                            if search == '':
                                 continue
-                            if search in tag[:len(search)]:
-                                fit += 1
+                            exclude = 0
+                            if search[0] == '!':
+                                exclude = 1
+                            else:
+                                size += 1
+                            if search[exclude:] in tag[:len(search) - exclude]:
+                                if exclude == 0:
+                                    fit += 1
+                                else:
+                                    size = -1
+                                    break
+                        if size == -1:
+                            break
                     if fit == size:
                         self.the_listbox.insert(END, file)
                         self.tags_listbox.insert(END, tags)
