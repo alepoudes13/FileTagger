@@ -6,7 +6,20 @@ class DBConnector:
         self.c = self.conn.cursor()
         self.activeTable = None
 
+    def deleteEmptyTable(self):
+        if self.activeTable == None:
+            return
+        row = self.c.execute(f'SELECT * FROM {self.activeTable}').fetchone()
+        if row == None:
+            self.c.execute(f'DROP TABLE {self.activeTable}')
+        self.conn.commit()
+
+    def close(self):
+        self.c.close()
+        self.conn.close()
+
     def __del__(self):
+        self.deleteEmptyTable()
         self.c.close()
         self.conn.close()
 
@@ -14,6 +27,7 @@ class DBConnector:
         self.conn.commit()
 
     def createTable(self, dir_path):
+        self.deleteEmptyTable()
         self.activeTable = f'[{dir_path}]'
         self.c.execute(f" CREATE TABLE IF NOT EXISTS {self.activeTable} (name text PRIMARY KEY, tags text); ")
         self.conn.commit()

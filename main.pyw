@@ -8,6 +8,11 @@ import clipboard
 from PIL import Image, ImageTk
 
 class Window:
+    def close(self):
+        db.deleteEmptyTable()
+        db.close()
+        exit()
+
     def __init__(self) -> None:
         self.dir = None
         self.leftIndex = None
@@ -18,7 +23,7 @@ class Window:
         self.window.config(background = "white")
         self.button_explore = Button(self.window, text = "Browse Files", command = self.openFolder)
         self.button_explore.grid(column = 1, row = 1)  
-        self.button_exit = Button(self.window, text = "Exit", command = exit)
+        self.button_exit = Button(self.window, text = "Exit", command = self.close)
         self.button_exit.grid(column = 2, row = 1)
         self.button_copy = Button(self.window, text = "Copy", command = self.copyFiles)
         self.button_copy.grid(column = 4, row = 1)  
