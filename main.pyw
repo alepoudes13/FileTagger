@@ -301,6 +301,8 @@ class Window:
         self.leftIndex = event.widget.curselection()[0]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
+            if self.the_listbox.get(self.lastIndex).split('.')[-1] == 'gif':
+                assert(0)
             thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
             if thumb.height > thumb.width:
                 w /= thumb.height / thumb.width
