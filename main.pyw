@@ -134,8 +134,10 @@ class Window:
                             if tag == '':
                                 continue
                             tags_size += 1
-                            if search in tag[:len(search)]:
-                                fit += 1
+                            for item in search.split('~'):
+                                if item != '' and item in tag[:len(item)]:
+                                    fit += 1
+                                    break
                     if fit == size == tags_size:
                         self.the_listbox.insert(END, file)
                         self.tags_listbox.insert(END, tags)
@@ -143,25 +145,38 @@ class Window:
                     if tags == '':
                         continue
                     fit = 0
-                    for tag in tags.split('|'):
-                        if tag == '':
-                            continue
-                        size = 0
-                        for search in self.searchFilter.lower().split('|'):
-                            if search == '':
-                                continue
-                            exclude = 0
-                            if search[0] == '!':
-                                exclude = 1
-                            else:
-                                size += 1
-                            if search[exclude:] in tag[:len(search) - exclude]:
-                                if exclude == 0:
-                                    fit += 1
-                                else:
-                                    size = -1
-                                    break
-                        if size == -1:
+                    tags_lst = [x for x in tags.split('|') if x != '']
+                    search_lst = [x for x in self.searchFilter.lower().split('|') if x != '']
+                    size = len(search_lst)
+                    for search in search_lst:
+                        item_lst = [x for x in search.split('~') if x != '']
+                        full_neg = False
+                        for item in item_lst:
+                            full_neg = True
+                            if item[0] != '!':
+                                full_neg = False
+                                break
+                        if full_neg:
+                            size -= 1
+                    for search in search_lst:
+                        valid = False
+                        for tag in tags_lst:
+                            item_lst = [x for x in search.split('~') if x != '']
+                            for item in item_lst:
+                                exclude = 0
+                                if item[0] == '!':
+                                    exclude = 1
+                                if item[exclude:] in tag[:len(item) - exclude]:
+                                    if exclude == 0:
+                                        valid = True
+                                    else:
+                                        fit = -1
+                                        break
+                            if fit == -1:
+                                break
+                        if valid:
+                            fit += 1
+                        if fit == -1:
                             break
                     if fit == size:
                         self.the_listbox.insert(END, file)

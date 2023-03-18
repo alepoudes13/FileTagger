@@ -8,9 +8,11 @@ Clear all tags of selected files with Backspace.<br>
 You can change all instances of an existing tag to a new tag name.
 ### Searching
 Search comes in 3 modes. <br>
-Default search is by filename. <br>
-Separate tags with "|", if there are any "|" symbols search will be done by tags. Putting ! before the tag will remove the files containing it.<br>
-Including "||" in the beginning will search for files with ONLY specified tags.
+1) Default search is by filename. <br>
+2) Separate tags with "|", if there are any "|" symbols search will be done by tags. Putting ! before the tag will remove the files containing it. Separating tags with ~ will choose files containing at least one of them. <br>
+|A|B~C will select files with A|B, A|C, A|B|C;<br>
+|A|!B|C will select files with A|C.<br>
+3) Including "||" in the beginning will search for files with ONLY specified tags. Negative tag is not supported in this mode.
 ### Copying
 You can copy images on Ctrl+C. Selected image will be pasted to clipboard. <br>
 For gifs only the first frame is copied. <br>
