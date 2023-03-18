@@ -41,3 +41,9 @@ class Dict:
         self.tags[newTag] += self.tags[tag]
         self.tags.pop(tag)
         
+    def getStat(self):
+        stat = []
+        for tag in self.tags.items():
+            stat.append(tag)
+        stat.sort(key = lambda x: x[1], reverse=True)
+        return stat

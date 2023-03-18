@@ -43,6 +43,8 @@ class Window:
         self.button_del.grid(column = 6, row = 1)
         self.button_tag = Button(self.window, text = "Change tag to", command = self.changeTag)
         self.button_tag.grid(column = 7, row = 1)
+        self.button_stat = Button(self.window, text = "Tags stat", command = self.showStat)
+        self.button_stat.grid(column = 8, row = 1)
         self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.window.bind('<Configure>', self.frameResize)
@@ -50,6 +52,21 @@ class Window:
         self.searchEntry = Entry(self.window, background='#cccccc')
         self.searchEntry.grid(row = 1, column = 3)
         self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
+
+    #TAGS STAT================================================================
+
+    def showStat(self):
+        self.topFrame = Toplevel(self.window)
+        self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
+        self.topFrame.bind('<Escape>', self.destroyTop)
+
+        listbox = Listbox(self.topFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
+        listbox.pack()
+        listbox.configure(height=20)
+
+        stat = self.dict.getStat()
+        for i in stat:
+            listbox.insert(END, str(i[0]) + ': ' + str(i[1]))
 
     #FILES MANAGEMENT================================================================
 
