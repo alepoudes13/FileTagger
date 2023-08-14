@@ -1,5 +1,6 @@
 import os, glob, shutil
 from tkinter import *
+from tkinter import ttk
 from tkinter import filedialog
 from video import VideoPlayer
 from database import DBConnector
@@ -16,14 +17,10 @@ class Window:
         db.close()
         exit()
 
-    def frameResize(self, event = None):
-        self.listFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
-        self.thumbFrame.config(height=self.window.winfo_height() - self.button_explore.winfo_height(), width = self.window.winfo_width() / 2)
-        self.thumbFrame.place(relx=0.5, y = self.button_explore.winfo_height())
-
     #INIT================================================================
 
     def __init__(self) -> None:
+        self.history = []
         self.dir = None
         self.leftIndex = None
         self.lastIndex = None
@@ -31,27 +28,47 @@ class Window:
         self.window.title('Tagger')
         self.window.geometry("1000x500")
         self.window.config(background = "white")
-        self.button_explore = Button(self.window, text = "Browse Files", command = self.openFolder)
+        self.menu_bar = Frame(self.window, width=1000)
+        self.menu_bar.place(x = 0, y = 0, relwidth = 1, relheight = 0.05)
+        self.button_explore = Button(self.menu_bar, text = "Browse Files", command = self.openFolder)
         self.button_explore.grid(column = 1, row = 1)  
-        self.button_exit = Button(self.window, text = "Exit", command = self.close)
+        self.button_exit = Button(self.menu_bar, text = "Exit", command = self.close)
         self.button_exit.grid(column = 2, row = 1)
-        self.button_copy = Button(self.window, text = "Copy", command = self.copyFiles)
+        self.button_copy = Button(self.menu_bar, text = "Copy", command = self.copyFiles)
         self.button_copy.grid(column = 4, row = 1)  
-        self.button_move = Button(self.window, text = "Move to", command = self.moveFiles)
+        self.button_move = Button(self.menu_bar, text = "Move to", command = self.moveFiles)
         self.button_move.grid(column = 5, row = 1)
-        self.button_del = Button(self.window, text = "Delete files", command = self.deleteFiles)
+        self.button_del = Button(self.menu_bar, text = "Delete files", command = self.deleteFiles)
         self.button_del.grid(column = 6, row = 1)
-        self.button_tag = Button(self.window, text = "Change tag to", command = self.changeTag)
+        self.button_tag = Button(self.menu_bar, text = "Change tag to", command = self.changeTag)
         self.button_tag.grid(column = 7, row = 1)
-        self.button_stat = Button(self.window, text = "Tags stat", command = self.showStat)
+        self.button_stat = Button(self.menu_bar, text = "Tags stat", command = self.showStat)
         self.button_stat.grid(column = 8, row = 1)
         self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
+        self.listFrame.place(x = 0, rely = 0.05, relwidth=0.5, relheight=0.95)
         self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
-        self.window.bind('<Configure>', self.frameResize)
+        self.thumbFrame.place(relx=0.5, rely = 0.05, relheight=0.95, relwidth=0.5)
         self.window.bind('<Control-c>', self.onCopy)
-        self.searchEntry = Entry(self.window, background='#cccccc')
+        self.searchEntry = Entry(self.menu_bar, background='#cccccc')
         self.searchEntry.grid(row = 1, column = 3)
         self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
+
+        columns = ("#1", "#2")
+        self.treeview = ttk.Treeview(self.listFrame, show="headings", columns=columns, selectmode=EXTENDED)
+
+        self.treeview.heading("#1", text="Имя файла")
+        self.treeview.heading("#2", text="Тэги")
+        ysb = ttk.Scrollbar(self.listFrame, orient=VERTICAL, command=self.treeview.yview)
+        self.treeview.configure(yscroll=ysb.set)
+        ysb.pack(fill=Y, side=RIGHT)
+        self.treeview.pack(fill=BOTH, expand=True)
+        self.treeview.bind('<<TreeviewSelect>>', self.onItemSelection)
+        self.treeview.bind('<Return>', self.onEnterKey)
+        self.treeview.bind('<BackSpace>', self.onBackspace)
+        self.treeview.bind('<Up>', self.onKeyUpDown)
+        self.treeview.bind('<Down>', self.onKeyUpDown)
+        self.treeview.bind('<KeyPress>', self.keyPressed)
+        self.treeview.bind('<KeyRelease>', self.keyReleased)
 
     #TAGS STAT================================================================
 
@@ -85,10 +102,11 @@ class Window:
     def copyFiles(self):
         dest = filedialog.askdirectory(title = "Select folder to open")
         db.createTable(dest)
-        for index in self.active_list.curselection()[::-1]:
+        for index in self.treeview.selection()[::-1]:
             try:
-                shutil.copy2(self.dir + '/' + self.the_listbox.get(index), dest)
-                db.setTag(self.the_listbox.get(index), self.tags_listbox.get(index))
+                name, tags = self.treeview.item(index)["values"][0:2]
+                shutil.copy2(self.dir + '/' + name, dest)
+                db.setTag(name, tags)
             except:
                 pass
         db.commit()
@@ -97,28 +115,30 @@ class Window:
     def moveFiles(self):
         dest = filedialog.askdirectory(title = "Select folder to open")
         db.createTable(dest)
-        for index in self.active_list.curselection()[::-1]:
+        for index in self.treeview.selection()[::-1]:
             try:
-                db.setTag(self.the_listbox.get(index), self.tags_listbox.get(index))
-                shutil.move(self.dir + '/' + self.the_listbox.get(index), dest)
-                self.dict.deleteTags(self.tags_listbox.get(index))
+                name, tags = self.treeview.item(index)["values"][0:2]
+                db.setTag(name, tags)
+                shutil.move(self.dir + '/' + name, dest)
+                self.dict.deleteTags(tags)
             except:
                 pass
         db.commit()
         db.createTable(self.dir)
-        for index in self.active_list.curselection()[::-1]:
-            db.deleteName(self.the_listbox.get(index))
+        for index in self.treeview.selection()[::-1]:
+            db.deleteName(name)
         db.commit()
         self.listFilesInFolder()
 
     def deleteFiles(self):
-        for index in self.active_list.curselection()[::-1]:
+        for index in self.treeview.selection()[::-1]:
             try:
-                db.deleteName(self.the_listbox.get(index))
-                self.dict.deleteTags(self.tags_listbox.get(index))
+                name, tags = self.treeview.item(index)["values"][0:2]
+                db.deleteName(name)
+                self.dict.deleteTags(tags)
             except:
                 pass
-            os.remove(self.dir + '/' + self.the_listbox.get(index))
+            os.remove(self.dir + '/' + name)
         db.commit()
         self.listFilesInFolder()
 
@@ -129,15 +149,14 @@ class Window:
         search_mode = 0
         if '|' in self.searchFilter:
             search_mode = 1 if self.searchFilter[0:2] == '||' else 2
-        self.the_listbox.delete(0, END)
-        self.tags_listbox.delete(0, END)
+        self.treeview.delete(*self.treeview.get_children())
+
         for file in self.files:
             tags = db.getTags(file)
             match search_mode:
                 case 0:
                     if self.searchFilter.lower() in file:
-                        self.the_listbox.insert(END, file)
-                        self.tags_listbox.insert(END, tags)
+                        self.treeview.insert("", END, values=(file, tags))
                 case 1:
                     if tags == '':
                         continue
@@ -156,8 +175,7 @@ class Window:
                                     fit += 1
                                     break
                     if fit == size == tags_size:
-                        self.the_listbox.insert(END, file)
-                        self.tags_listbox.insert(END, tags)
+                        self.treeview.insert("", END, values=(file, tags))
                 case 2:
                     if tags == '':
                         continue
@@ -196,13 +214,10 @@ class Window:
                         if fit == -1:
                             break
                     if fit == size:
-                        self.the_listbox.insert(END, file)
-                        self.tags_listbox.insert(END, tags)
+                        self.treeview.insert("", END, values=(file, tags))
         
-        self.the_listbox.insert(END, "")
-        self.tags_listbox.insert(END, "")
-        self.the_listbox.insert(END, "Total Files: " + str(self.the_listbox.size() - 1))
-        self.tags_listbox.insert(END, "")
+        self.treeview.insert("", END, values=("", ""))
+        self.treeview.insert("", END, values=("Total Files: " + str(len(self.treeview.get_children()) - 1), ''))
 
     #TAG CHANGE================================================================
 
@@ -243,14 +258,9 @@ class Window:
         self.dict.rename(tag, newTag)
         self.tagsEntry.delete(0, END)
         self.newTagEntry.delete(0, END)
-        for index in range(self.active_list.size()):
-            sel = False
-            if self.tags_listbox.select_includes(index) == True:
-                sel = True
-            self.tags_listbox.delete(index)
-            self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
-            if sel:
-                self.active_list.selection_set(index)
+        for item in self.treeview.get_children():
+            name = self.treeview.item(item)["values"][0]
+            self.treeview.set(item, '#2', db.getTags(name))
 
     def onRight(self, event):
         self.newTagEntry.focus_set()
@@ -261,8 +271,7 @@ class Window:
     #TAGS WINDOW================================================================
 
     def onEnterKey(self, event = None):
-        self.active_list = event.widget
-        self.curselect_list = self.active_list.curselection()
+        self.curselect_list = self.treeview.selection()
 
         self.topFrame = Toplevel(self.window)
         self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
@@ -293,16 +302,15 @@ class Window:
 
     def destroyTop(self, event):
         self.topFrame.destroy()
-        self.active_list.activate(self.lastIndex)
-        self.active_list.selection_set(self.lastIndex)
+        self.treeview.selection_set(self.lastIndex)
+        # self.active_list.activate(self.lastIndex)
 
     def onEntrySubmit(self, event = None):
         tag = self.tagsEntry.get()
         for index in self.curselect_list:
-            db.setTag(self.the_listbox.get(index), tag)
-            self.tags_listbox.delete(index)
-            self.tags_listbox.insert(index, db.getTags(self.the_listbox.get(index)))
-            self.active_list.selection_set(index)
+            name, tags = self.treeview.item(index)["values"][0:2]
+            db.setTag(name, tag)
+            self.treeview.set(index, '#2', db.getTags(name))
             self.dict.addTag(tag)
         db.commit()
         self.tagsEntry.delete(0, END)
@@ -325,17 +333,17 @@ class Window:
     #FILES LIST================================================================
 
     def onItemSelection(self, event = None):
-        self.active_list = event.widget
-        if self.leftIndex == event.widget.curselection()[0]:
-            self.lastIndex = event.widget.curselection()[-1]
+        if self.leftIndex == event.widget.selection()[0]:
+            self.lastIndex = event.widget.selection()[-1]
         else:
-            self.lastIndex = event.widget.curselection()[0]
-        self.leftIndex = event.widget.curselection()[0]
+            self.lastIndex = event.widget.selection()[0]
+        self.leftIndex = event.widget.selection()[0]
+        name, tags = self.treeview.item(self.lastIndex)["values"][0:2]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
-            if self.the_listbox.get(self.lastIndex).split('.')[-1] == 'gif':
+            if name.split('.')[-1] == 'gif':
                 assert(0)
-            thumb = Image.open(self.dir + '/' + self.the_listbox.get(self.lastIndex))
+            thumb = Image.open(self.dir + '/' + name)
             if thumb.height > thumb.width:
                 w /= thumb.height / thumb.width
             else:
@@ -350,77 +358,49 @@ class Window:
         except:
             for widgets in self.thumbFrame.winfo_children():
                 widgets.destroy()
-            video = VideoPlayer(self.thumbFrame, self.dir + '/' + self.the_listbox.get(self.lastIndex), w, h)
+            video = VideoPlayer(self.thumbFrame, self.dir + '/' + name, w, h)
 
     def listFilesInFolder(self):
-        self.frameResize()
-        
-        self.the_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white", selectmode=EXTENDED)
-        self.the_listbox.place(relx = 0, rely = 0, relwidth = 0.4, relheight = 1)
-        self.the_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
-        self.the_listbox.bind('<MouseWheel>', self.onMouseWheel)
-        self.the_listbox.bind('<Return>', self.onEnterKey)
-        self.the_listbox.bind('<Up>', self.onKeyUpDown)
-        self.the_listbox.bind('<Down>', self.onKeyUpDown)
-        self.the_listbox.bind('<BackSpace>', self.onBackspace)
-
-        self.tags_listbox = Listbox(self.listFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white", selectmode=EXTENDED)
-        self.tags_listbox.place(relx = 0.4, rely = 0, relwidth = 0.6, relheight = 1)
-        self.tags_listbox.bind('<<ListboxSelect>>', self.onItemSelection)
-        self.tags_listbox.bind('<Return>', self.onEnterKey)
-        self.tags_listbox.bind('<MouseWheel>', self.onMouseWheel)
-        self.tags_listbox.bind('<Up>', self.onKeyUpDown)
-        self.tags_listbox.bind('<Down>', self.onKeyUpDown)
-        self.tags_listbox.bind('<BackSpace>', self.onBackspace)
-        
-        the_scrollbar = Scrollbar(self.tags_listbox, orient=VERTICAL,command=self.onScroll)
-        self.the_listbox.config(yscrollcommand=the_scrollbar.set)
-        self.tags_listbox.config(yscrollcommand=the_scrollbar.set)
-        the_scrollbar.pack(side=RIGHT, fill=Y)
-        self.listFrame.place(x = 0, y = self.button_explore.winfo_height())
-
+        self.treeview.delete(*self.treeview.get_children())
         files = list(filter(os.path.isfile, glob.glob(self.dir + "\*")))
         files.sort(key=os.path.getctime)
         files.reverse()
         self.files = [file.split("\\")[-1] for file in files]
         for file in self.files:
-            self.the_listbox.insert(END, file)
-            self.tags_listbox.insert(END, db.getTags(file))
-        self.the_listbox.insert(END, "")
-        self.tags_listbox.insert(END, "")
-        self.the_listbox.insert(END, "Total Files: " + str(len(files)))
-        self.tags_listbox.insert(END, "")
-
-    def onScroll(self, *args):
-        self.the_listbox.yview(*args)
-        self.tags_listbox.yview(*args)
-
-    def onMouseWheel(self, event):
-        self.the_listbox.yview("scroll", int(-event.delta / 10), "units")
-        self.tags_listbox.yview("scroll", int(-event.delta / 10),"units")
-        return "break"
+            self.treeview.insert("", END, values=(file, db.getTags(file)))
+        self.treeview.insert("", END, values=("", ""))
+        self.treeview.insert("", END, values=("Total Files: " + str(len(files)), ''))
     
+    def keyReleased(self, event):
+        if event.keycode in self.history and event.keycode == 16:
+            self.history.pop(self.history.index(event.keycode))
+
+    def keyPressed(self, event):
+        if event.keycode == 16 and not event.keycode in self.history:
+            self.history.append(event.keycode)
+
     def onKeyUpDown(self, event):
-        index = 0
-        selection = None
-        if event.keysym == 'Up':
-            index = -1
-            selection = min(event.widget.curselection()[0], event.widget.curselection()[-1])
-        elif event.keysym == 'Down':
-            index = 1
-            selection = max(event.widget.curselection()[0], event.widget.curselection()[-1])
-        self.the_listbox.see(selection + index)
-        self.tags_listbox.see(selection + index)
+        if 16 in self.history:
+            index = 0
+            selection = None
+            if event.keysym == 'Up':
+                index = -1
+                selection = min(self.treeview.index(self.treeview.selection()[0]), self.treeview.index(self.treeview.selection()[-1]))
+            elif event.keysym == 'Down':
+                index = 1
+                selection = max(self.treeview.index(self.treeview.selection()[0]), self.treeview.index(self.treeview.selection()[-1]))
+            print(selection + index)
+            hex_str = hex(selection + index + 1)[2:].upper()
+            self.treeview.selection_add('I' + '0' * max(0, 3 - len(hex_str)) + hex_str)
+            return "break"
     
     def onBackspace(self, event):
-        for index in event.widget.curselection():
-            self.dict.deleteTags(self.tags_listbox.get(index))
-            db.deleteName(self.the_listbox.get(index))
-            self.tags_listbox.delete(index)
-            self.tags_listbox.insert(index, '')
-            event.widget.selection_set(index)
+        for index in event.widget.selection():
+            name, tags = self.treeview.item(index)["values"][0:2]
+            self.dict.deleteTags(tags)
+            db.deleteName(name)
+            self.treeview.set(index, '#2', '')
         db.commit()
-        event.widget.activate(self.lastIndex)
 
 if __name__ == '__main__':
     db = DBConnector('database.db')
