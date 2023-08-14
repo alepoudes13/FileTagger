@@ -8,6 +8,9 @@ from dictionary import Dict
 import clipboard
 from PIL import Image, ImageTk
 
+SHIFT = 16
+SHIFT_MODE = 0
+
 class Window:
 
     #WINDOW MANAGEMENT================================================================
@@ -20,6 +23,7 @@ class Window:
     #INIT================================================================
 
     def __init__(self) -> None:
+        self.lastSelected = 0
         self.history = []
         self.dir = None
         self.leftIndex = None
@@ -303,7 +307,6 @@ class Window:
     def destroyTop(self, event):
         self.topFrame.destroy()
         self.treeview.selection_set(self.lastIndex)
-        # self.active_list.activate(self.lastIndex)
 
     def onEntrySubmit(self, event = None):
         tag = self.tagsEntry.get()
@@ -333,11 +336,17 @@ class Window:
     #FILES LIST================================================================
 
     def onItemSelection(self, event = None):
-        if self.leftIndex == event.widget.selection()[0]:
-            self.lastIndex = event.widget.selection()[-1]
+        
+        if SHIFT in self.history and SHIFT_MODE in self.history:
+            index = self.treeview.index(self.treeview.selection()[0]) if len(self.treeview.selection()) == 1 else self.lastSelected
+            hex_str = hex(index + 1)[2:].upper()
+            self.lastIndex = 'I' + '0' * max(0, 3 - len(hex_str)) + hex_str
         else:
-            self.lastIndex = event.widget.selection()[0]
-        self.leftIndex = event.widget.selection()[0]
+            if self.leftIndex == event.widget.selection()[0]:
+                self.lastIndex = event.widget.selection()[-1]
+            else:
+                self.lastIndex = event.widget.selection()[0]
+            self.leftIndex = event.widget.selection()[0]
         name, tags = self.treeview.item(self.lastIndex)["values"][0:2]
         w, h = (self.window.winfo_width() - self.listFrame.winfo_width(), self.listFrame.winfo_height())
         try:
@@ -372,27 +381,41 @@ class Window:
         self.treeview.insert("", END, values=("Total Files: " + str(len(files)), ''))
     
     def keyReleased(self, event):
-        if event.keycode in self.history and event.keycode == 16:
+        if event.keycode in self.history:
             self.history.pop(self.history.index(event.keycode))
 
     def keyPressed(self, event):
-        if event.keycode == 16 and not event.keycode in self.history:
+        if not event.keycode in self.history:
             self.history.append(event.keycode)
 
     def onKeyUpDown(self, event):
-        if 16 in self.history:
+        if SHIFT in self.history:
+            self.history.append(SHIFT_MODE)
             index = 0
-            selection = None
+            selection =  self.treeview.index(self.treeview.selection()[0]) if len(self.treeview.selection()) == 1 else self.lastSelected
             if event.keysym == 'Up':
                 index = -1
-                selection = min(self.treeview.index(self.treeview.selection()[0]), self.treeview.index(self.treeview.selection()[-1]))
             elif event.keysym == 'Down':
                 index = 1
-                selection = max(self.treeview.index(self.treeview.selection()[0]), self.treeview.index(self.treeview.selection()[-1]))
-            print(selection + index)
-            hex_str = hex(selection + index + 1)[2:].upper()
-            self.treeview.selection_add('I' + '0' * max(0, 3 - len(hex_str)) + hex_str)
+            try:
+                hex_str = hex(selection + index + 1)[2:].upper()
+                hex_str = 'I' + '0' * max(0, 3 - len(hex_str)) + hex_str
+                if(hex_str in self.treeview.selection()):
+                    hex_old = hex(selection + 1)[2:].upper()
+                    self.treeview.selection_remove('I' + '0' * max(0, 3 - len(hex_old)) + hex_old)
+                self.treeview.selection_add(hex_str)
+                self.treeview.see(hex_str)
+                self.treeview.focus(hex_str)
+                self.lastSelected = selection + index
+
+            except:
+                pass
             return "break"
+        else:
+            try:
+                self.history.pop(self.history.index(SHIFT_MODE))
+            except:
+                pass
     
     def onBackspace(self, event):
         for index in event.widget.selection():
