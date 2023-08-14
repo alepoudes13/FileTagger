@@ -1,38 +1,38 @@
 import datetime
-import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog
 from tkVideoPlayer import TkinterVideo
 
 
 class VideoPlayer:
-    def __init__(self, frame: tk.Frame, path, width, height):
+    def __init__(self, frame: ttk.Frame, path, width, height):
         """ init player on a frame """
-        vid_frame = tk.Frame(frame, width=width, height=height - 65)
+        vid_frame = ttk.Frame(frame, width=width, height=height - 65)
         self.vid_player = TkinterVideo(vid_frame, keep_aspect=True)
         self.vid_player.place(relx=0, rely=0, relwidth=1, relheight=1)
         vid_frame.pack()
 
-        self.play_pause_btn = tk.Button(frame, text="Play", command=self.play_pause)
+        self.play_pause_btn = ttk.Button(frame, text="Play", command=self.play_pause)
         self.play_pause_btn.pack()
 
-        self.skip_plus_5sec = tk.Button(frame, text="Skip -5 sec", command=lambda: self.skip(-5))
+        self.skip_plus_5sec = ttk.Button(frame, text="Skip -5 sec", command=lambda: self.skip(-5))
         self.skip_plus_5sec.pack(side="left")
 
-        self.start_time = tk.Label(frame, text=str(datetime.timedelta(seconds=0)))
+        self.start_time = ttk.Label(frame, text=str(datetime.timedelta(seconds=0)))
         self.start_time.pack(side="left")
 
-        self.progress_slider = tk.Scale(frame, from_=0, to=0, orient="horizontal")
+        self.progress_slider = ttk.Scale(frame, from_=0, to=0, orient="horizontal")
         self.progress_slider.bind("<ButtonRelease-1>", self.seek)
         self.progress_slider.pack(side="left", fill="x", expand=True)
 
-        self.end_time = tk.Label(frame, text=str(datetime.timedelta(seconds=0)))
+        self.end_time = ttk.Label(frame, text=str(datetime.timedelta(seconds=0)))
         self.end_time.pack(side="left")
 
         self.vid_player.bind("<<Duration>>", self.update_duration)
         self.vid_player.bind("<<SecondChanged>>", self.update_scale)
         self.vid_player.bind("<<Ended>>", self.video_ended )
 
-        self.skip_plus_5sec = tk.Button(frame, text="Skip +5 sec", command=lambda: self.skip(5))
+        self.skip_plus_5sec = ttk.Button(frame, text="Skip +5 sec", command=lambda: self.skip(5))
         self.skip_plus_5sec.pack(side="left")
 
         self.load_video(path)

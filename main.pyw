@@ -32,28 +32,28 @@ class Window:
         self.window.title('Tagger')
         self.window.geometry("1000x500")
         self.window.config(background = "white")
-        self.menu_bar = Frame(self.window, width=1000)
-        self.menu_bar.place(x = 0, y = 0, relwidth = 1, relheight = 0.05)
-        self.button_explore = Button(self.menu_bar, text = "Browse Files", command = self.openFolder)
+        menu_bar = ttk.Frame(self.window, width=1000)
+        menu_bar.place(x = 0, y = 0, relwidth = 1, relheight = 0.05)
+        self.button_explore = ttk.Button(menu_bar, text = "Browse Files", command = self.openFolder)
         self.button_explore.grid(column = 1, row = 1)  
-        self.button_exit = Button(self.menu_bar, text = "Exit", command = self.close)
-        self.button_exit.grid(column = 2, row = 1)
-        self.button_copy = Button(self.menu_bar, text = "Copy", command = self.copyFiles)
-        self.button_copy.grid(column = 4, row = 1)  
-        self.button_move = Button(self.menu_bar, text = "Move to", command = self.moveFiles)
-        self.button_move.grid(column = 5, row = 1)
-        self.button_del = Button(self.menu_bar, text = "Delete files", command = self.deleteFiles)
-        self.button_del.grid(column = 6, row = 1)
-        self.button_tag = Button(self.menu_bar, text = "Change tag to", command = self.changeTag)
-        self.button_tag.grid(column = 7, row = 1)
-        self.button_stat = Button(self.menu_bar, text = "Tags stat", command = self.showStat)
-        self.button_stat.grid(column = 8, row = 1)
-        self.listFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
+        button_exit = ttk.Button(menu_bar, text = "Exit", command = self.close)
+        button_exit.grid(column = 2, row = 1)
+        button_copy = ttk.Button(menu_bar, text = "Copy", command = self.copyFiles)
+        button_copy.grid(column = 4, row = 1)  
+        button_move = ttk.Button(menu_bar, text = "Move to", command = self.moveFiles)
+        button_move.grid(column = 5, row = 1)
+        button_del = ttk.Button(menu_bar, text = "Delete files", command = self.deleteFiles)
+        button_del.grid(column = 6, row = 1)
+        button_tag = ttk.Button(menu_bar, text = "Change tag to", command = self.changeTag)
+        button_tag.grid(column = 7, row = 1)
+        button_stat = ttk.Button(menu_bar, text = "Tags stat", command = self.showStat)
+        button_stat.grid(column = 8, row = 1)
+        self.listFrame = ttk.Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.listFrame.place(x = 0, rely = 0.05, relwidth=0.5, relheight=0.95)
-        self.thumbFrame = Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
+        self.thumbFrame = ttk.Frame(self.window, width = 500, height = self.window.winfo_height() - self.button_explore.winfo_height())
         self.thumbFrame.place(relx=0.5, rely = 0.05, relheight=0.95, relwidth=0.5)
         self.window.bind('<Control-c>', self.onCopy)
-        self.searchEntry = Entry(self.menu_bar, background='#cccccc')
+        self.searchEntry = ttk.Entry(menu_bar, background='#cccccc')
         self.searchEntry.grid(row = 1, column = 3)
         self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
 
@@ -149,23 +149,23 @@ class Window:
     #SEARCH ================================================================
 
     def getSearchEntry(self, event = None):
-        self.searchFilter = self.searchEntry.get()
+        searchFilter = self.searchEntry.get()
         search_mode = 0
-        if '|' in self.searchFilter:
-            search_mode = 1 if self.searchFilter[0:2] == '||' else 2
+        if '|' in searchFilter:
+            search_mode = 1 if searchFilter[0:2] == '||' else 2
         self.treeview.delete(*self.treeview.get_children())
 
         for file in self.files:
             tags = db.getTags(file)
             match search_mode:
                 case 0:
-                    if self.searchFilter.lower() in file:
+                    if searchFilter.lower() in file:
                         self.treeview.insert("", END, values=(file, tags))
                 case 1:
                     if tags == '':
                         continue
                     fit, size, tags_size = 0, 0, 0
-                    for search in self.searchFilter.lower().split('|'):
+                    for search in searchFilter.lower().split('|'):
                         if search == '':
                             continue
                         size += 1
@@ -185,7 +185,7 @@ class Window:
                         continue
                     fit = 0
                     tags_lst = [x for x in tags.split('|') if x != '']
-                    search_lst = [x for x in self.searchFilter.lower().split('|') if x != '']
+                    search_lst = [x for x in searchFilter.lower().split('|') if x != '']
                     size = len(search_lst)
                     for search in search_lst:
                         item_lst = [x for x in search.split('~') if x != '']
@@ -229,20 +229,20 @@ class Window:
         self.topFrame = Toplevel(self.window)
         self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
 
-        fromLabel = Label(self.topFrame, font=("Calibri", "10"), text="From:")
+        fromLabel = ttk.Label(self.topFrame, font=("Calibri", "10"), text="From:")
         fromLabel.grid(row=1, column=1)
 
-        toLabel = Label(self.topFrame, font=("Calibri", "10"), text="To:")
+        toLabel = ttk.Label(self.topFrame, font=("Calibri", "10"), text="To:")
         toLabel.grid(row=1, column=2)
 
-        self.tagsEntry = Entry(self.topFrame)
+        self.tagsEntry = ttk.Entry(self.topFrame)
         self.tagsEntry.grid(column=1, row=2)
         self.tagsEntry.bind('<KeyRelease>', self.onTagsEntryKeyRelease)
         self.tagsEntry.bind('<Tab>', self.onTab)
         self.tagsEntry.bind('<Down>', self.onEntryDown)
         self.tagsEntry.bind('<Right>', self.onRight)
 
-        self.newTagEntry = Entry(self.topFrame)
+        self.newTagEntry = ttk.Entry(self.topFrame)
         self.newTagEntry.grid(column=2, row=2)
         self.newTagEntry.bind('<Return>', self.onTagRenameSubmit)
         self.newTagEntry.bind('<Left>', self.onLeft)
@@ -279,7 +279,7 @@ class Window:
 
         self.topFrame = Toplevel(self.window)
         self.topFrame.geometry("+%d+%d" %(self.window.winfo_x()+self.listFrame.winfo_width(),self.window.winfo_y()+self.button_explore.winfo_height() * 2))
-        self.tagsEntry = Entry(self.topFrame)
+        self.tagsEntry = ttk.Entry(self.topFrame)
         self.tagsEntry.pack()
         self.tagsEntry.bind('<Return>', self.onEntrySubmit)
         self.tagsEntry.bind('<KeyRelease>', self.onTagsEntryKeyRelease)
@@ -361,7 +361,7 @@ class Window:
             tk_thumb = ImageTk.PhotoImage(thumb)
             for widgets in self.thumbFrame.winfo_children():
                 widgets.destroy()
-            label = Label(self.thumbFrame, image=tk_thumb)
+            label = ttk.Label(self.thumbFrame, image=tk_thumb)
             label.image = tk_thumb
             label.place(relx=0.5, rely=0.5, anchor=CENTER)
         except:
