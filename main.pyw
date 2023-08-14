@@ -99,7 +99,7 @@ class Window:
     
     def onCopy(self, event):
         try:
-            clipboard.send_image(self.dir + '/' + self.the_listbox.get(self.lastIndex))
+            clipboard.send_image(self.dir + '/' + self.treeview.item(self.lastIndex)["values"][0])
         except:
             pass
 
