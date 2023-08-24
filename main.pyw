@@ -155,12 +155,15 @@ class Window:
             search_mode = 1 if searchFilter[0:2] == '||' else 2
         self.treeview.delete(*self.treeview.get_children())
 
+        total_size = 0
+
         for file in self.files:
             tags = db.getTags(file)
             match search_mode:
                 case 0:
                     if searchFilter.lower() in file:
-                        self.treeview.insert("", END, values=(file, tags))
+                        self.treeview.insert("", END, values=(file, tags), iid=total_size)
+                        total_size += 1
                 case 1:
                     if tags == '':
                         continue
@@ -179,7 +182,8 @@ class Window:
                                     fit += 1
                                     break
                     if fit == size == tags_size:
-                        self.treeview.insert("", END, values=(file, tags))
+                        self.treeview.insert("", END, values=(file, tags), iid=total_size)
+                        total_size += 1
                 case 2:
                     if tags == '':
                         continue
@@ -218,10 +222,11 @@ class Window:
                         if fit == -1:
                             break
                     if fit == size:
-                        self.treeview.insert("", END, values=(file, tags))
+                        self.treeview.insert("", END, values=(file, tags), iid=total_size)
+                        total_size += 1
         
-        self.treeview.insert("", END, values=("", ""))
-        self.treeview.insert("", END, values=("Total Files: " + str(len(self.treeview.get_children()) - 1), ''))
+        self.treeview.insert("", END, values=("", ""), iid=total_size)
+        self.treeview.insert("", END, values=("Total Files: " + str(len(self.treeview.get_children()) - 1), ''), iid=total_size + 1)
 
     #TAG CHANGE================================================================
 
@@ -338,9 +343,7 @@ class Window:
     def onItemSelection(self, event = None):
         
         if SHIFT in self.history and SHIFT_MODE in self.history:
-            index = self.treeview.index(self.treeview.selection()[0]) if len(self.treeview.selection()) == 1 else self.lastSelected
-            hex_str = hex(index + 1)[2:].upper()
-            self.lastIndex = 'I' + '0' * max(0, 3 - len(hex_str)) + hex_str
+            self.lastIndex = self.treeview.index(self.treeview.selection()[0]) if len(self.treeview.selection()) == 1 else self.lastSelected
         else:
             if self.leftIndex == event.widget.selection()[0]:
                 self.lastIndex = event.widget.selection()[-1]
@@ -375,10 +378,10 @@ class Window:
         files.sort(key=os.path.getctime)
         files.reverse()
         self.files = [file.split("\\")[-1] for file in files]
-        for file in self.files:
-            self.treeview.insert("", END, values=(file, db.getTags(file)))
-        self.treeview.insert("", END, values=("", ""))
-        self.treeview.insert("", END, values=("Total Files: " + str(len(files)), ''))
+        for ind, file in enumerate(self.files):
+            self.treeview.insert("", END, values=(file, db.getTags(file)), iid=ind)
+        self.treeview.insert("", END, values=("", ""), iid = len(files))
+        self.treeview.insert("", END, values=("Total Files: " + str(len(files)), ''), iid=len(files) + 1)
     
     def keyReleased(self, event):
         if event.keycode in self.history:
@@ -398,18 +401,15 @@ class Window:
             elif event.keysym == 'Down':
                 index = 1
             try:
-                hex_str = hex(selection + index + 1)[2:].upper()
-                hex_str = 'I' + '0' * max(0, 3 - len(hex_str)) + hex_str
-                if(hex_str in self.treeview.selection()):
-                    hex_old = hex(selection + 1)[2:].upper()
-                    self.treeview.selection_remove('I' + '0' * max(0, 3 - len(hex_old)) + hex_old)
-                self.treeview.selection_add(hex_str)
-                self.treeview.see(hex_str)
-                self.treeview.focus(hex_str)
+                if(str(selection + index) in self.treeview.selection()):
+                    self.treeview.selection_remove(str(selection))
+                self.treeview.selection_add(selection + index)
+                self.treeview.see(selection + index)
+                self.treeview.focus(selection + index)
                 self.lastSelected = selection + index
-
-            except:
+            except Exception as e:
                 pass
+                
             return "break"
         else:
             try:
