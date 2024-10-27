@@ -1,4 +1,4 @@
-# Files Tagger
+# File Tagger
 Allows to mark files with your own tags and then search by tags or filename.<br>
 Previews are available for images and videos.<br>
 ### Tagging
