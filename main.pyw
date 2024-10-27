@@ -7,6 +7,10 @@ from database import DBConnector
 from dictionary import Dict
 import clipboard
 from PIL import Image, ImageTk
+import subprocess
+
+# pip install pywin32
+# pip install tkvideoplayer
 
 SHIFT = 16
 SHIFT_MODE = 0
@@ -73,6 +77,25 @@ class Window:
         self.treeview.bind('<Down>', self.onKeyUpDown)
         self.treeview.bind('<KeyPress>', self.keyPressed)
         self.treeview.bind('<KeyRelease>', self.keyReleased)
+
+        self.popupMenu = Menu(self.listFrame, tearoff = 0) 
+        self.popupMenu.add_command(label ="Открыть в проводнике", command=self.showInExplorer) 
+
+        self.treeview.bind("<Button-3>", self.doPopup) 
+
+    #POPUP MENU===============================================================
+
+    def doPopup(self, event): 
+        try: 
+            self.popupMenu.tk_popup(event.x_root, event.y_root) 
+        finally: 
+            self.popupMenu.grab_release() 
+
+    def showInExplorer(self):
+        for index in self.treeview.selection():
+            name = self.treeview.item(index)["values"][0]
+            path = fr"{self.dir}/{name}".replace("/", "\\")
+            subprocess.Popen(fr'explorer /select,"{path}"')
 
     #TAGS STAT================================================================
 
