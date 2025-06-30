@@ -64,8 +64,8 @@ class Window:
         columns = ("#1", "#2")
         self.treeview = ttk.Treeview(self.listFrame, show="headings", columns=columns, selectmode=EXTENDED)
 
-        self.treeview.heading("#1", text="Имя файла")
-        self.treeview.heading("#2", text="Тэги")
+        self.treeview.heading("#1", text="File name")
+        self.treeview.heading("#2", text="Tags")
         ysb = ttk.Scrollbar(self.listFrame, orient=VERTICAL, command=self.treeview.yview)
         self.treeview.configure(yscroll=ysb.set)
         ysb.pack(fill=Y, side=RIGHT)
@@ -79,7 +79,7 @@ class Window:
         self.treeview.bind('<KeyRelease>', self.keyReleased)
 
         self.popupMenu = Menu(self.listFrame, tearoff = 0) 
-        self.popupMenu.add_command(label ="Открыть в проводнике", command=self.showInExplorer) 
+        self.popupMenu.add_command(label ="Show in explorer", command=self.showInExplorer) 
 
         self.treeview.bind("<Button-3>", self.doPopup) 
 
