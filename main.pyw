@@ -59,7 +59,7 @@ class Window:
         self.window.bind('<Control-c>', self.onCopy)
         self.searchEntry = ttk.Entry(menu_bar, background='#cccccc')
         self.searchEntry.grid(row = 1, column = 3)
-        self.searchEntry.bind('<KeyRelease>', self.getSearchEntry)
+        self.searchEntry.bind('<Return>', self.getSearchEntry)
 
         columns = ("#1", "#2")
         self.treeview = ttk.Treeview(self.listFrame, show="headings", columns=columns, selectmode=EXTENDED)
@@ -106,7 +106,7 @@ class Window:
 
         listbox = Listbox(self.topFrame, selectbackground="#F24FBF", font=("Calibri", "10"), background="white")
         listbox.pack()
-        listbox.configure(height=20)
+        listbox.configure(height=30)
 
         stat = self.dict.getStat()
         for i in stat:
